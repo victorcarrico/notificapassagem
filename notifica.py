@@ -9,15 +9,13 @@ import smtplib
 import time
 import traceback
 
+from selenium import webdriver
 from email.mime.text import MIMEText
 
-FLIGHTS = [
-]
+from notifica_settings import *
 
-RECIPIENT_LIST = (
-)
 
-SENDER_GMAIL = 
+FLIGHTS = [{'url': flight, 'last_price': None} for flight in FLIGHT_URLS]
 
 def start_smtp_session(password):
     session = smtplib.SMTP('smtp.gmail.com', 587)
@@ -35,18 +33,35 @@ def send_email(msg_text, password):
     session = start_smtp_session(password)
     session.sendmail(msg['From'], RECIPIENT_LIST, msg.as_string())
 
+def get_and_parse(url):
+    browser = webdriver.Firefox()
+    browser.implicitly_wait(10)
+    try:
+        browser.get(url)
+        lowest_prices = {}
+        items = browser.find_element_by_class_name('cluster').find_elements_by_class_name('data')
+        name = '; '.join([item.text.replace('\n', ' ').replace('\r', '') for item in items])
+
+        price_table = browser.find_element_by_class_name('matrix-container')
+        airlines = price_table.find_elements_by_class_name('matrix-airline')
+        for airline_elem in airlines:
+            prices = airline_elem.find_elements_by_css_selector('.amount')
+            airline = airline_elem.find_element_by_css_selector('.airline-name').text
+            lowest_prices[airline] = min([int(price.text.replace('.', '')) for price in prices])
+        return {'name': name, 'lowest_price': min(lowest_prices.values())}
+    finally:
+        browser.quit()
+
 def get_lowest_prices():
     prices = []
     for flight in FLIGHTS:
-        req = requests.get(flight['url'], headers=flight['headers'])
-        resp = json.loads(req.text)
-        lowest_price = int(resp['result']['data']['lowestFare'][0]['raw']['amount']);
-        if not flight['last_price'] or lowest_price < flight['last_price']:
-            prices.append(u'%s: R$%d' % (flight['name'], lowest_price))
-        flight['last_price'] = lowest_price
+        info = get_and_parse(flight['url'])
+        if not flight['last_price'] or info['lowest_price'] < flight['last_price']:
+            prices.append(u'%s\r\nMenor preço: R$%d' % (info['name'], info['lowest_price']))
+        flight['last_price'] = info['lowest_price']
     if not prices:
         return None
-    return u'\r\n'.join(prices)
+    return u'\r\n\r\n'.join(prices)
 
 if __name__ == '__main__':
     print 'Digite a senha do email abaixo'
