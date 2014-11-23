@@ -17,6 +17,9 @@ from notifica_settings import *
 
 FLIGHTS = [{'url': flight, 'last_price': None} for flight in FLIGHT_URLS]
 
+def _get_number(element):
+    return int(element.text.replace('.', ''))
+
 def start_smtp_session(password):
     session = smtplib.SMTP('smtp.gmail.com', 587)
     session.ehlo()
@@ -47,8 +50,18 @@ def get_and_parse(url):
         for airline_elem in airlines:
             prices = airline_elem.find_elements_by_css_selector('.amount')
             airline = airline_elem.find_element_by_css_selector('.airline-name').text
-            lowest_prices[airline] = min([int(price.text.replace('.', '')) for price in prices])
-        return {'name': name, 'lowest_price': min(lowest_prices.values())}
+            lowest_prices[airline] = min([_get_number(price) for price in prices])
+
+        browser.find_element_by_class_name('flights-tab-priceSuggestionMatrix').click()
+        prices_on_3_day_range = browser.find_elements_by_css_selector(
+            '#price-suggestion-matrix .price-suggestion-matrix-content .price-amount')
+        lowest_price_on_3_day_range = min([_get_number(price) for price in prices_on_3_day_range])
+
+        return {
+            'name': name,
+            'lowest_price': min(lowest_prices.values()),
+            'lowest_price_on_3_day_range': lowest_price_on_3_day_range
+        }
     finally:
         browser.quit()
 
@@ -56,9 +69,19 @@ def get_lowest_prices():
     prices = []
     for flight in FLIGHTS:
         info = get_and_parse(flight['url'])
-        if not flight['last_price'] or info['lowest_price'] < flight['last_price']:
-            prices.append(u'%s\r\nMenor preço: R$%d' % (info['name'], info['lowest_price']))
+
+        lower_price = 'last_price' not in flight or info['lowest_price'] < flight['last_price']
+        lower_price_on_3_day_range = ('last_price_on_3_day_range' not in flight or
+            info['lowest_price_on_3_day_range'] < flight['last_price_on_3_day_range'])
+        if lower_price or lower_price_on_3_day_range:
+            text = ((u'%s\r\n'
+                    u'Menor preço: R$%d\r\n'
+                    u'Menor preço de outros trechos em uma variação de até 3 dias: R$%d') %
+                    (info['name'], info['lowest_price'], info['lowest_price_on_3_day_range']))
+            prices.append(text)
+
         flight['last_price'] = info['lowest_price']
+        flight['last_price_on_3_day_range'] = info['lowest_price_on_3_day_range']
     if not prices:
         return None
     return u'\r\n\r\n'.join(prices)

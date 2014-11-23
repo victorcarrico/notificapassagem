@@ -1,0 +1,11 @@
+FLIGHT_URLS = [
+    "http://www.decolar.com/shop/flights/results/roundtrip/RIO/SAO/2015-01-09/2015-01-12/1/0/0"
+]
+
+RECIPIENT_LIST = (
+    'user1@email.com',
+    'user2@email.com',
+    'user3@email.com',
+)
+
+SENDER_GMAIL = 'sender@email.com'
