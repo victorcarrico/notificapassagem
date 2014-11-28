@@ -1,11 +1,27 @@
-FLIGHT_URLS = [
-    "http://www.decolar.com/shop/flights/results/roundtrip/RIO/SAO/2015-01-09/2015-01-12/1/0/0"
+PROFILES = [
+    {
+        'flight_urls' : [
+            "http://www.decolar.com/shop/flights/results/roundtrip/RIO/SAO/2015-01-09/2015-01-12/1/0/0",
+        ],
+        'recipient_list': (
+            'user1@email.com',
+            'user2@email.com',
+            'user3@email.com',
+        )
+    },
+    {
+        'flight_urls' : [
+            "http://www.decolar.com/shop/flights/results/roundtrip/SAO/RIO/2015-02-01/2015-02-10/1/0/0",
+            "http://www.decolar.com/shop/flights/results/roundtrip/REC/RIO/2015-01-01/2015-02-01/1/0/0",
+        ],
+        'recipient_list': (
+            'user1@email.com',
+            'user2@email.com',
+            'user3@email.com',
+        )
+    }
 ]
 
-RECIPIENT_LIST = (
-    'user1@email.com',
-    'user2@email.com',
-    'user3@email.com',
-)
+SENDER_GMAIL = 'sender@gmail.com'
 
-SENDER_GMAIL = 'sender@email.com'
+INTERVAL = 30

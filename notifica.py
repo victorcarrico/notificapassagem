@@ -15,8 +15,6 @@ from email.mime.text import MIMEText
 from notifica_settings import *
 
 
-FLIGHTS = [{'url': flight, 'last_price': None} for flight in FLIGHT_URLS]
-
 def _get_number(element):
     return int(element.text.replace('.', ''))
 
@@ -26,15 +24,6 @@ def start_smtp_session(password):
     session.starttls()
     session.login(SENDER_GMAIL, password)
     return session
-
-def send_email(msg_text, password):
-    msg = MIMEText(msg_text.encode('utf-8'))
-    msg['Subject'] = u'Menores preços de passagens às %s' % (
-        datetime.datetime.now().strftime('%H:%M %d/%m/%y'))
-    msg['From'] = SENDER_GMAIL
-    msg['To'] = ','.join(RECIPIENT_LIST)
-    session = start_smtp_session(password)
-    session.sendmail(msg['From'], RECIPIENT_LIST, msg.as_string())
 
 def get_and_parse(url):
     browser = webdriver.Firefox()
@@ -65,9 +54,9 @@ def get_and_parse(url):
     finally:
         browser.quit()
 
-def get_lowest_prices():
+def get_lowest_prices(flights):
     prices = []
-    for flight in FLIGHTS:
+    for flight in flights:
         info = get_and_parse(flight['url'])
 
         lower_price = 'last_price' not in flight or info['lowest_price'] < flight['last_price']
@@ -86,23 +75,39 @@ def get_lowest_prices():
         return None
     return u'\r\n\r\n'.join(prices)
 
+def send_email(msg_text, password, recipient_list):
+    msg = MIMEText(msg_text.encode('utf-8'))
+    msg['Subject'] = u'Menores preços de passagens às %s' % (
+        datetime.datetime.now().strftime('%H:%M %d/%m/%y'))
+    msg['From'] = SENDER_GMAIL
+    msg['To'] = ','.join(recipient_list)
+    session = start_smtp_session(password)
+    session.sendmail(msg['From'], recipient_list, msg.as_string())
+
+def init_profiles():
+    for profile in PROFILES:
+        profile['flights'] = [{'url': flight, 'last_price': None} for flight in profile['flight_urls']]
+
 if __name__ == '__main__':
     print 'Digite a senha do email abaixo'
     password = getpass.getpass()
     session = start_smtp_session(password)
+    init_profiles()
+
     while True:
-        try:
-            prices = get_lowest_prices()
-            if prices:
-                print '--- Conteúdo do email a ser enviado ---'
-                print prices
+        for profile in PROFILES:
+            try:
+                prices = get_lowest_prices(profile['flights'])
+                if prices:
+                    print '--- Conteúdo do email a ser enviado ---'
+                    print prices
+                    print ''
+                    send_email(prices, password, profile['recipient_list'])
+                else:
+                    print '--- Nenhum preço de passagem caiu ---'
+                    print ''
+            except:
+                print u'[%s] Erro:' % datetime.datetime.now().strftime('%H:%M:%S %d/%m/%y')
+                traceback.print_exc()
                 print ''
-                send_email(prices, password)
-            else:
-                print '--- Nenhum preço de passagem caiu ---'
-                print ''
-        except:
-            print u'[%s] Erro:' % datetime.datetime.now().strftime('%H:%M:%S %d/%m/%y')
-            traceback.print_exc()
-            print ''
-        time.sleep(1800)
+        time.sleep(INTERVAL*60)
