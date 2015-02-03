@@ -11,6 +11,7 @@ import traceback
 
 from selenium import webdriver
 from email.mime.text import MIMEText
+from pyvirtualdisplay import Display
 
 from notifica_settings import *
 
@@ -65,8 +66,10 @@ def get_lowest_prices(flights):
         if lower_price or lower_price_on_3_day_range:
             text = ((u'%s\r\n'
                     u'Menor preço: R$%d\r\n'
-                    u'Menor preço de outros trechos em uma variação de até 3 dias: R$%d') %
-                    (info['name'], info['lowest_price'], info['lowest_price_on_3_day_range']))
+                    u'Menor preço de outros trechos em uma variação de até 3 dias: R$%d\r\n'
+                    u'Mais informações: %s') %
+                        (info['name'], info['lowest_price'],
+                            info['lowest_price_on_3_day_range'], flight['url']))
             prices.append(text)
 
         flight['last_price'] = info['lowest_price']
@@ -94,6 +97,9 @@ if __name__ == '__main__':
     session = start_smtp_session(password)
     init_profiles()
 
+    display = Display(visible=0, size=(1024, 768))
+    display.start()
+
     while True:
         for profile in PROFILES:
             try:
@@ -111,3 +117,5 @@ if __name__ == '__main__':
                 traceback.print_exc()
                 print ''
         time.sleep(INTERVAL*60)
+
+    display.stop()
