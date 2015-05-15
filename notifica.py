@@ -32,6 +32,8 @@ def get_and_parse(url):
     try:
         browser.get(url)
         lowest_prices = {}
+
+        browser.find_element_by_class_name('flights-tab-airlinePricesMatrix').click()
         items = browser.find_element_by_class_name('cluster').find_elements_by_class_name('data')
         name = '; '.join([item.text.replace('\n', ' ').replace('\r', '') for item in items])
 
